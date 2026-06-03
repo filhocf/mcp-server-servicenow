@@ -2,8 +2,6 @@
 
 from unittest.mock import patch, MagicMock
 
-import pytest
-
 from servicenow_mcp.utils.config import OAuthConfig, AuthConfig, AuthType
 from servicenow_mcp.auth.auth_manager import AuthManager
 
@@ -85,7 +83,7 @@ class TestAuthManagerClientCredentials:
             ),
         )
         manager = AuthManager(auth_config, "https://instance.service-now.com")
-        headers = manager.get_headers()
+        manager.get_headers()  # triggers token fetch
 
         assert manager.token == "test_token_pw"
         call_data = mock_post.call_args[1]["data"]
