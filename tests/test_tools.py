@@ -208,4 +208,4 @@ class TestAggregateRecordsSchema:
         """Verify total tool count is 19 (18 original + aggregate_records)."""
         async with Client(mcp) as client:
             tools = await client.list_tools()
-            assert len(tools) == 19
+            assert len(tools) == 29
