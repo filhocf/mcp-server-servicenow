@@ -122,23 +122,16 @@ def create_config(args: argparse.Namespace) -> ServerConfig:
         )
 
     elif auth_type == AuthType.OAUTH:
-        if (
-            not args.client_id
-            or not args.client_secret
-            or not args.username
-            or not args.password
-        ):
-            raise ValueError(
-                "client-id, client-secret, username, and password required for OAuth"
-            )
+        if not args.client_id or not args.client_secret:
+            raise ValueError("client-id and client-secret required for OAuth")
         token_url = args.token_url or f"{instance_url}/oauth_token.do"
         auth_config = AuthConfig(
             type=auth_type,
             oauth=OAuthConfig(
                 client_id=args.client_id,
                 client_secret=args.client_secret,
-                username=args.username,
-                password=args.password,
+                username=args.username or None,
+                password=args.password or None,
                 token_url=token_url,
             ),
         )

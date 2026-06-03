@@ -65,12 +65,17 @@ class AuthManager:
             "Content-Type": "application/x-www-form-urlencoded",
         }
 
-        # Try password grant
-        data = {
-            "grant_type": "password",
-            "username": oauth_config.username,
-            "password": oauth_config.password,
-        }
+        # Choose grant type based on available credentials
+        if oauth_config.username and oauth_config.password:
+            data = {
+                "grant_type": "password",
+                "username": oauth_config.username,
+                "password": oauth_config.password,
+            }
+        else:
+            data = {
+                "grant_type": "client_credentials",
+            }
         response = requests.post(token_url, headers=headers, data=data)
 
         if response.status_code == 200:
