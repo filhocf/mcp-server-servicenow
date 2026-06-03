@@ -100,7 +100,9 @@ def incident_create(
 
     url = f"{config.api_url}/table/incident"
     params = {"sysparm_input_display_value": "true"}
-    response = make_sn_request("POST", url, config.timeout, params=params, json_data=payload)
+    response = make_sn_request(
+        "POST", url, config.timeout, params=params, json_data=payload
+    )
     data = parse_json_response(response, url)
     result = data.get("result") or {}
     return {
@@ -239,7 +241,9 @@ def change_create(
 
     url = f"{config.api_url}/table/change_request"
     params = {"sysparm_input_display_value": "true"}
-    response = make_sn_request("POST", url, config.timeout, params=params, json_data=payload)
+    response = make_sn_request(
+        "POST", url, config.timeout, params=params, json_data=payload
+    )
     data = parse_json_response(response, url)
     result = data.get("result") or {}
     return {
