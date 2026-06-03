@@ -1,6 +1,6 @@
 """Tool registry regression tests.
 
-Safety net to ensure all 19 tools remain registered after FastMCP migration.
+Safety net to ensure all 29 tools remain registered after FastMCP migration.
 """
 
 import pytest
@@ -39,6 +39,18 @@ EXPECTED_TOOLS = {
     "create_update_set",
     "set_current_update_set",
     "list_update_set_changes",
+    # ITSM (7)
+    "incident_search",
+    "incident_create",
+    "incident_update",
+    "change_search",
+    "change_create",
+    "change_update",
+    "change_tasks",
+    # Catalog (3)
+    "catalog_items",
+    "ritm_search",
+    "ritm_create",
 }
 
 
@@ -59,16 +71,18 @@ def _init_services():
     import servicenow_mcp.tools.cmdb_tools  # noqa: F401
     import servicenow_mcp.tools.system_tools  # noqa: F401
     import servicenow_mcp.tools.update_set_tools  # noqa: F401
+    import servicenow_mcp.tools.itsm_tools  # noqa: F401
+    import servicenow_mcp.tools.catalog_tools  # noqa: F401
 
 
 class TestToolRegistry:
     @pytest.mark.asyncio
     async def test_exact_tool_count(self) -> None:
-        """Exactly 19 tools must be registered."""
+        """Exactly 29 tools must be registered."""
         async with Client(mcp) as client:
             tools = await client.list_tools()
-            assert len(tools) == 19, (
-                f"Expected 19 tools, got {len(tools)}: {sorted(t.name for t in tools)}"
+            assert len(tools) == 29, (
+                f"Expected 29 tools, got {len(tools)}: {sorted(t.name for t in tools)}"
             )
 
     @pytest.mark.asyncio

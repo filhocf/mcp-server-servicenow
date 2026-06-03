@@ -268,6 +268,8 @@ def main() -> None:
         import servicenow_mcp.tools.cmdb_tools  # noqa: F401
         import servicenow_mcp.tools.system_tools  # noqa: F401
         import servicenow_mcp.tools.update_set_tools  # noqa: F401
+        import servicenow_mcp.tools.itsm_tools  # noqa: F401
+        import servicenow_mcp.tools.catalog_tools  # noqa: F401
         import servicenow_mcp.resources  # noqa: F401
 
         logger.info(f"Transport: {args.transport}")
