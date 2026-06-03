@@ -32,7 +32,7 @@ def catalog_items(
     url = f"{config.api_url}/table/sc_cat_item"
     response = make_sn_request("GET", url, config.timeout, params=params)
     data = parse_json_response(response, url)
-    result = data.get("result", [])
+    result = data.get("result") or []
     return {"count": len(result), "items": result}
 
 
@@ -75,7 +75,7 @@ def ritm_search(
     url = f"{config.api_url}/table/sc_req_item"
     response = make_sn_request("GET", url, config.timeout, params=params)
     data = parse_json_response(response, url)
-    result = data.get("result", [])
+    result = data.get("result") or []
     return {"count": len(result), "ritms": result}
 
 
@@ -100,7 +100,7 @@ def ritm_create(
     url = f"{config.instance_url}/api/sn_sc/servicecatalog/items/{cat_item_sys_id}/order_now"
     response = make_sn_request("POST", url, config.timeout, json_data=payload)
     data = parse_json_response(response, url)
-    result = data.get("result", {})
+    result = data.get("result") or {}
     return {
         "request_number": result.get("request_number"),
         "request_id": result.get("request_id"),

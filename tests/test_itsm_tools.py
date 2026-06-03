@@ -87,7 +87,7 @@ class TestIncidentSearch:
         assert "priorityIN1" in query
         assert "cmdb_ci.name=mir-api-prod" in query
         assert "sys_created_on>=2026-01-01" in query
-        assert "short_descriptionLIKEVPN" in query
+        assert "short_descriptionLIKEVPN" in query or "123TEXTQUERY321=VPN" in query
         assert mock_request.call_args[1]["params"]["sysparm_limit"] == 10
 
     @patch("servicenow_mcp.tools.itsm_tools.make_sn_request")

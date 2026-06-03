@@ -48,9 +48,7 @@ def incident_search(
     if created_after:
         query_parts.append(f"sys_created_on>={created_after}")
     if text_search:
-        query_parts.append(
-            f"short_descriptionLIKE{text_search}^ORdescriptionLIKE{text_search}"
-        )
+        query_parts.append(f"123TEXTQUERY321={text_search}")
     query_parts.append("ORDERBYDESCsys_created_on")
     encoded_query = "^".join(query_parts)
 
@@ -63,7 +61,7 @@ def incident_search(
     url = f"{config.api_url}/table/incident"
     response = make_sn_request("GET", url, config.timeout, params=params)
     data = parse_json_response(response, url)
-    result = data.get("result", [])
+    result = data.get("result") or []
     return {"count": len(result), "incidents": result}
 
 
@@ -101,9 +99,10 @@ def incident_create(
             payload[key] = val
 
     url = f"{config.api_url}/table/incident"
-    response = make_sn_request("POST", url, config.timeout, json_data=payload)
+    params = {"sysparm_input_display_value": "true"}
+    response = make_sn_request("POST", url, config.timeout, params=params, json_data=payload)
     data = parse_json_response(response, url)
-    result = data.get("result", {})
+    result = data.get("result") or {}
     return {
         "sys_id": result.get("sys_id"),
         "number": result.get("number"),
@@ -143,7 +142,7 @@ def incident_update(
     url = f"{config.api_url}/table/incident/{sys_id}"
     response = make_sn_request("PATCH", url, config.timeout, json_data=payload)
     data = parse_json_response(response, url)
-    result = data.get("result", {})
+    result = data.get("result") or {}
     return {
         "sys_id": result.get("sys_id"),
         "number": result.get("number"),
@@ -194,7 +193,7 @@ def change_search(
     url = f"{config.api_url}/table/change_request"
     response = make_sn_request("GET", url, config.timeout, params=params)
     data = parse_json_response(response, url)
-    result = data.get("result", [])
+    result = data.get("result") or []
     return {"count": len(result), "changes": result}
 
 
@@ -239,9 +238,10 @@ def change_create(
             payload[key] = val
 
     url = f"{config.api_url}/table/change_request"
-    response = make_sn_request("POST", url, config.timeout, json_data=payload)
+    params = {"sysparm_input_display_value": "true"}
+    response = make_sn_request("POST", url, config.timeout, params=params, json_data=payload)
     data = parse_json_response(response, url)
-    result = data.get("result", {})
+    result = data.get("result") or {}
     return {
         "sys_id": result.get("sys_id"),
         "number": result.get("number"),
@@ -268,7 +268,7 @@ def change_update(
     url = f"{config.api_url}/table/change_request/{sys_id}"
     response = make_sn_request("PATCH", url, config.timeout, json_data=payload)
     data = parse_json_response(response, url)
-    result = data.get("result", {})
+    result = data.get("result") or {}
     return {
         "sys_id": result.get("sys_id"),
         "number": result.get("number"),
@@ -289,5 +289,5 @@ def change_tasks(
     url = f"{config.api_url}/table/change_task"
     response = make_sn_request("GET", url, config.timeout, params=params)
     data = parse_json_response(response, url)
-    result = data.get("result", [])
+    result = data.get("result") or []
     return {"count": len(result), "tasks": result}
