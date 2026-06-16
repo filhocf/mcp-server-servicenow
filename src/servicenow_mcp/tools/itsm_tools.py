@@ -152,6 +152,30 @@ def incident_update(
     }
 
 
+def _derive_dtp_state(record: Dict[str, Any]) -> str:
+    """Derive the effective state for Dataprev (DTP) customized ServiceNow.
+
+    DTP uses a custom workflow where the standard 'state' field alone is
+    unreliable. The real status must be derived from active + approval + state.
+    """
+    active = str(record.get("active", "true")).lower() == "true"
+    approval = str(record.get("approval", "")).lower()
+    state = str(record.get("state", "")).lower()
+
+    if not active:
+        return "Cancelado"
+    if approval == "approved":
+        return "Aprovada"
+    if approval == "requested":
+        return "Aguardando Aprovação"
+    if approval == "rejected":
+        return "Rejeitada"
+    if state in ("0", "closed", "encerrados(as)"):
+        return "Implementada"
+    # Fallback: return the state display value as-is
+    return str(record.get("state", "Desconhecido"))
+
+
 @mcp.tool(tags={"read", "itsm"})
 def change_search(
     assignment_group: Annotated[
@@ -188,7 +212,7 @@ def change_search(
 
     params = {
         "sysparm_query": encoded_query,
-        "sysparm_fields": "sys_id,number,short_description,state,type,risk,priority,assignment_group,cmdb_ci,start_date,end_date",
+        "sysparm_fields": "sys_id,number,short_description,state,active,approval,type,risk,priority,assignment_group,cmdb_ci,start_date,end_date",
         "sysparm_display_value": "true",
         "sysparm_limit": limit,
     }
@@ -196,6 +220,8 @@ def change_search(
     response = make_sn_request("GET", url, config.timeout, params=params)
     data = parse_json_response(response, url)
     result = data.get("result") or []
+    for r in result:
+        r["dtp_state"] = _derive_dtp_state(r)
     return {"count": len(result), "changes": result}
 
 

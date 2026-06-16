@@ -230,6 +230,63 @@ class TestChangeSearch:
         assert "start_date>=2026-06-01" in query
 
 
+# --- change_search DTP state ---
+
+
+class TestDtpStateDerivation:
+    """Tests for DTP-customized state mapping."""
+
+    def test_active_false_returns_cancelado(self):
+        from servicenow_mcp.tools.itsm_tools import _derive_dtp_state
+        assert _derive_dtp_state({"active": "false", "approval": "not requested", "state": "4"}) == "Cancelado"
+
+    def test_active_true_approved_returns_aprovada(self):
+        from servicenow_mcp.tools.itsm_tools import _derive_dtp_state
+        assert _derive_dtp_state({"active": "true", "approval": "approved", "state": "-1"}) == "Aprovada"
+
+    def test_active_true_requested_returns_aguardando(self):
+        from servicenow_mcp.tools.itsm_tools import _derive_dtp_state
+        assert _derive_dtp_state({"active": "true", "approval": "requested", "state": "-3"}) == "Aguardando Aprovação"
+
+    def test_active_true_rejected_returns_rejeitada(self):
+        from servicenow_mcp.tools.itsm_tools import _derive_dtp_state
+        assert _derive_dtp_state({"active": "true", "approval": "rejected", "state": "-1"}) == "Rejeitada"
+
+    def test_state_closed_returns_implementada(self):
+        from servicenow_mcp.tools.itsm_tools import _derive_dtp_state
+        assert _derive_dtp_state({"active": "true", "approval": "", "state": "0"}) == "Implementada"
+
+    def test_fallback_returns_state_value(self):
+        from servicenow_mcp.tools.itsm_tools import _derive_dtp_state
+        assert _derive_dtp_state({"active": "true", "approval": "", "state": "Revisão"}) == "Revisão"
+
+    @patch("servicenow_mcp.tools.itsm_tools.make_sn_request")
+    @patch("servicenow_mcp.tools.itsm_tools.get_config")
+    def test_change_search_includes_dtp_state(self, mock_config, mock_request, sn_config):
+        mock_config.return_value = sn_config
+        mock_request.return_value = _make_response({"result": [
+            {"number": "CHG001", "active": "true", "approval": "approved", "state": "-1"}
+        ]})
+
+        from servicenow_mcp.tools.itsm_tools import change_search
+        result = change_search()
+
+        assert result["changes"][0]["dtp_state"] == "Aprovada"
+
+    @patch("servicenow_mcp.tools.itsm_tools.make_sn_request")
+    @patch("servicenow_mcp.tools.itsm_tools.get_config")
+    def test_change_search_fields_include_active_approval(self, mock_config, mock_request, sn_config):
+        mock_config.return_value = sn_config
+        mock_request.return_value = _make_response({"result": []})
+
+        from servicenow_mcp.tools.itsm_tools import change_search
+        change_search()
+
+        fields = mock_request.call_args[1]["params"]["sysparm_fields"]
+        assert "active" in fields
+        assert "approval" in fields
+
+
 # --- change_create ---
 
 
