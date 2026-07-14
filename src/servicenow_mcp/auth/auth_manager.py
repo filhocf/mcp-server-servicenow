@@ -6,7 +6,7 @@ from typing import Dict, Optional
 
 import requests
 
-from servicenow_mcp.utils.config import AuthConfig, AuthType
+from servicenow_mcp.utils.config import AuthConfig, AuthType, TokenEndpointAuthMethod
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +58,6 @@ class AuthManager:
                 raise ValueError("Instance URL is required for OAuth authentication")
             token_url = f"{self.instance_url}/oauth_token.do"
 
-        from servicenow_mcp.utils.config import TokenEndpointAuthMethod
-
         auth_method = oauth_config.token_endpoint_auth_method
         headers: Dict[str, str] = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -82,11 +80,13 @@ class AuthManager:
             # Send client credentials in POST body (broader compatibility)
             data["client_id"] = oauth_config.client_id
             data["client_secret"] = oauth_config.client_secret
-        else:
+        elif auth_method == TokenEndpointAuthMethod.CLIENT_SECRET_BASIC:
             # client_secret_basic: send via HTTP Basic Auth header
             auth_str = f"{oauth_config.client_id}:{oauth_config.client_secret}"
             auth_header = base64.b64encode(auth_str.encode()).decode()
             headers["Authorization"] = f"Basic {auth_header}"
+        else:
+            raise ValueError(f"Unsupported token endpoint auth method: {auth_method}")
 
         response = requests.post(token_url, headers=headers, data=data)
 
