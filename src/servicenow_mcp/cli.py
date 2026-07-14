@@ -14,6 +14,7 @@ from servicenow_mcp.utils.config import (
     OAuthConfig,
     ApiKeyConfig,
     ServerConfig,
+    TokenEndpointAuthMethod,
 )
 
 logging.basicConfig(
@@ -54,6 +55,14 @@ def parse_args() -> argparse.Namespace:
         "--client-secret", default=os.environ.get("SERVICENOW_CLIENT_SECRET")
     )
     parser.add_argument("--token-url", default=os.environ.get("SERVICENOW_TOKEN_URL"))
+    parser.add_argument(
+        "--token-endpoint-auth-method",
+        choices=["client_secret_post", "client_secret_basic"],
+        default=os.environ.get(
+            "SERVICENOW_TOKEN_ENDPOINT_AUTH_METHOD", "client_secret_post"
+        ),
+        help="OAuth token endpoint auth method (default: client_secret_post)",
+    )
     parser.add_argument("--api-key", default=os.environ.get("SERVICENOW_API_KEY"))
     parser.add_argument(
         "--api-key-header",
@@ -125,6 +134,10 @@ def create_config(args: argparse.Namespace) -> ServerConfig:
         if not args.client_id or not args.client_secret:
             raise ValueError("client-id and client-secret required for OAuth")
         token_url = args.token_url or f"{instance_url}/oauth_token.do"
+        auth_method_str = (
+            getattr(args, "token_endpoint_auth_method", None) or "client_secret_post"
+        )
+        auth_method = TokenEndpointAuthMethod(auth_method_str)
         auth_config = AuthConfig(
             type=auth_type,
             oauth=OAuthConfig(
@@ -133,6 +146,7 @@ def create_config(args: argparse.Namespace) -> ServerConfig:
                 username=args.username or None,
                 password=args.password or None,
                 token_url=token_url,
+                token_endpoint_auth_method=auth_method,
             ),
         )
 
