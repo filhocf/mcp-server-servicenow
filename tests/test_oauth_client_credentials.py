@@ -2,7 +2,12 @@
 
 from unittest.mock import patch, MagicMock
 
-from servicenow_mcp.utils.config import OAuthConfig, AuthConfig, AuthType
+from servicenow_mcp.utils.config import (
+    OAuthConfig,
+    AuthConfig,
+    AuthType,
+    TokenEndpointAuthMethod,
+)
 from servicenow_mcp.auth.auth_manager import AuthManager
 
 
@@ -30,6 +35,26 @@ class TestOAuthConfigModel:
         )
         assert config.username == "user"
         assert config.password == "pass"
+
+    def test_default_auth_method_is_client_secret_post(self):
+        """Default token_endpoint_auth_method should be client_secret_post."""
+        config = OAuthConfig(client_id="cid", client_secret="csec")
+        assert (
+            config.token_endpoint_auth_method
+            == TokenEndpointAuthMethod.CLIENT_SECRET_POST
+        )
+
+    def test_explicit_client_secret_basic(self):
+        """Can set client_secret_basic explicitly."""
+        config = OAuthConfig(
+            client_id="cid",
+            client_secret="csec",
+            token_endpoint_auth_method=TokenEndpointAuthMethod.CLIENT_SECRET_BASIC,
+        )
+        assert (
+            config.token_endpoint_auth_method
+            == TokenEndpointAuthMethod.CLIENT_SECRET_BASIC
+        )
 
 
 class TestAuthManagerClientCredentials:
@@ -92,6 +117,102 @@ class TestAuthManagerClientCredentials:
         assert call_data["password"] == "pass"
 
 
+class TestTokenEndpointAuthMethod:
+    """AuthManager should use the configured token endpoint auth method."""
+
+    @patch("servicenow_mcp.auth.auth_manager.requests.post")
+    def test_client_secret_post_sends_credentials_in_body(self, mock_post):
+        """client_secret_post: client_id and client_secret in POST body."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_token": "token_post",
+            "token_type": "Bearer",
+        }
+        mock_post.return_value = mock_response
+
+        auth_config = AuthConfig(
+            type=AuthType.OAUTH,
+            oauth=OAuthConfig(
+                client_id="my_client",
+                client_secret="my_secret",
+                token_endpoint_auth_method=TokenEndpointAuthMethod.CLIENT_SECRET_POST,
+            ),
+        )
+        manager = AuthManager(auth_config, "https://instance.service-now.com")
+        manager.get_headers()
+
+        call_kwargs = mock_post.call_args[1]
+        call_data = call_kwargs["data"]
+        call_headers = call_kwargs["headers"]
+
+        # Credentials MUST be in body
+        assert call_data["client_id"] == "my_client"
+        assert call_data["client_secret"] == "my_secret"
+        # No Authorization header for token request
+        assert "Authorization" not in call_headers
+
+    @patch("servicenow_mcp.auth.auth_manager.requests.post")
+    def test_client_secret_basic_sends_credentials_in_header(self, mock_post):
+        """client_secret_basic: credentials via HTTP Basic Auth header."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_token": "token_basic",
+            "token_type": "Bearer",
+        }
+        mock_post.return_value = mock_response
+
+        auth_config = AuthConfig(
+            type=AuthType.OAUTH,
+            oauth=OAuthConfig(
+                client_id="my_client",
+                client_secret="my_secret",
+                token_endpoint_auth_method=TokenEndpointAuthMethod.CLIENT_SECRET_BASIC,
+            ),
+        )
+        manager = AuthManager(auth_config, "https://instance.service-now.com")
+        manager.get_headers()
+
+        call_kwargs = mock_post.call_args[1]
+        call_data = call_kwargs["data"]
+        call_headers = call_kwargs["headers"]
+
+        # Credentials MUST NOT be in body
+        assert "client_id" not in call_data
+        assert "client_secret" not in call_data
+        # Authorization header must be set with Basic scheme
+        assert "Authorization" in call_headers
+        assert call_headers["Authorization"].startswith("Basic ")
+
+    @patch("servicenow_mcp.auth.auth_manager.requests.post")
+    def test_default_method_is_client_secret_post(self, mock_post):
+        """Default (no explicit method) should use client_secret_post."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_token": "token_default",
+            "token_type": "Bearer",
+        }
+        mock_post.return_value = mock_response
+
+        auth_config = AuthConfig(
+            type=AuthType.OAUTH,
+            oauth=OAuthConfig(client_id="cid", client_secret="csec"),
+        )
+        manager = AuthManager(auth_config, "https://instance.service-now.com")
+        manager.get_headers()
+
+        call_kwargs = mock_post.call_args[1]
+        call_data = call_kwargs["data"]
+        call_headers = call_kwargs["headers"]
+
+        # Default = client_secret_post → credentials in body
+        assert call_data["client_id"] == "cid"
+        assert call_data["client_secret"] == "csec"
+        assert "Authorization" not in call_headers
+
+
 class TestCliValidation:
     """CLI should accept OAuth without username/password."""
 
@@ -110,9 +231,39 @@ class TestCliValidation:
             username=None,
             password=None,
             token_url=None,
+            token_endpoint_auth_method="client_secret_post",
             api_key=None,
             api_key_header="X-ServiceNow-API-Key",
         )
         config = create_config(args)
         assert config.auth.type == AuthType.OAUTH
         assert config.auth.oauth.client_id == "cid"
+        assert (
+            config.auth.oauth.token_endpoint_auth_method
+            == TokenEndpointAuthMethod.CLIENT_SECRET_POST
+        )
+
+    def test_oauth_with_client_secret_basic(self):
+        """CLI can set client_secret_basic method."""
+        from servicenow_mcp.cli import create_config
+        import argparse
+
+        args = argparse.Namespace(
+            instance_url="https://test.service-now.com",
+            debug=False,
+            timeout=30,
+            auth_type="oauth",
+            client_id="cid",
+            client_secret="csec",
+            username=None,
+            password=None,
+            token_url=None,
+            token_endpoint_auth_method="client_secret_basic",
+            api_key=None,
+            api_key_header="X-ServiceNow-API-Key",
+        )
+        config = create_config(args)
+        assert (
+            config.auth.oauth.token_endpoint_auth_method
+            == TokenEndpointAuthMethod.CLIENT_SECRET_BASIC
+        )

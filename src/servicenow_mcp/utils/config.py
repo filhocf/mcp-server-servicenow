@@ -21,6 +21,13 @@ class BasicAuthConfig(BaseModel):
     password: str
 
 
+class TokenEndpointAuthMethod(str, Enum):
+    """Token endpoint authentication methods (RFC 6749 / OpenID Connect Core)."""
+
+    CLIENT_SECRET_POST = "client_secret_post"
+    CLIENT_SECRET_BASIC = "client_secret_basic"
+
+
 class OAuthConfig(BaseModel):
     """Configuration for OAuth authentication."""
 
@@ -29,6 +36,9 @@ class OAuthConfig(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     token_url: Optional[str] = None
+    token_endpoint_auth_method: TokenEndpointAuthMethod = (
+        TokenEndpointAuthMethod.CLIENT_SECRET_POST
+    )
 
 
 class ApiKeyConfig(BaseModel):

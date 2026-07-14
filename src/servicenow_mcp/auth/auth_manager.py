@@ -58,16 +58,16 @@ class AuthManager:
                 raise ValueError("Instance URL is required for OAuth authentication")
             token_url = f"{self.instance_url}/oauth_token.do"
 
-        auth_str = f"{oauth_config.client_id}:{oauth_config.client_secret}"
-        auth_header = base64.b64encode(auth_str.encode()).decode()
-        headers = {
-            "Authorization": f"Basic {auth_header}",
+        from servicenow_mcp.utils.config import TokenEndpointAuthMethod
+
+        auth_method = oauth_config.token_endpoint_auth_method
+        headers: Dict[str, str] = {
             "Content-Type": "application/x-www-form-urlencoded",
         }
 
         # Choose grant type based on available credentials
         if oauth_config.username and oauth_config.password:
-            data = {
+            data: Dict[str, str] = {
                 "grant_type": "password",
                 "username": oauth_config.username,
                 "password": oauth_config.password,
@@ -76,6 +76,18 @@ class AuthManager:
             data = {
                 "grant_type": "client_credentials",
             }
+
+        # Token endpoint authentication method
+        if auth_method == TokenEndpointAuthMethod.CLIENT_SECRET_POST:
+            # Send client credentials in POST body (broader compatibility)
+            data["client_id"] = oauth_config.client_id
+            data["client_secret"] = oauth_config.client_secret
+        else:
+            # client_secret_basic: send via HTTP Basic Auth header
+            auth_str = f"{oauth_config.client_id}:{oauth_config.client_secret}"
+            auth_header = base64.b64encode(auth_str.encode()).decode()
+            headers["Authorization"] = f"Basic {auth_header}"
+
         response = requests.post(token_url, headers=headers, data=data)
 
         if response.status_code == 200:
