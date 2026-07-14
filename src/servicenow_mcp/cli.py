@@ -134,7 +134,10 @@ def create_config(args: argparse.Namespace) -> ServerConfig:
         if not args.client_id or not args.client_secret:
             raise ValueError("client-id and client-secret required for OAuth")
         token_url = args.token_url or f"{instance_url}/oauth_token.do"
-        auth_method = TokenEndpointAuthMethod(args.token_endpoint_auth_method)
+        auth_method_str = (
+            getattr(args, "token_endpoint_auth_method", None) or "client_secret_post"
+        )
+        auth_method = TokenEndpointAuthMethod(auth_method_str)
         auth_config = AuthConfig(
             type=auth_type,
             oauth=OAuthConfig(
